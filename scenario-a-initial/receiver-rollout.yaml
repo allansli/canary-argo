@@ -1,0 +1,45 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Rollout
+metadata:
+  name: receiver
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: receiver
+  template:
+    metadata:
+      labels:
+        app: receiver
+        version: v1
+    spec:
+      containers:
+      - name: receiver
+        image: allansli/receiver:v1
+        imagePullPolicy: Always
+        env:
+        - name: VERSION
+          value: "v1"
+        ports:
+        - containerPort: 50051
+        resources:
+          requests:
+            cpu: "100m"
+            memory: "64Mi"
+          limits:
+            cpu: "100m"
+            memory: "64Mi"
+  strategy:
+    canary: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: receiver
+spec:
+  selector:
+    app: receiver
+  ports:
+  - protocol: TCP
+    port: 50051
+    targetPort: 50051

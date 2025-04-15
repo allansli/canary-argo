@@ -1,0 +1,65 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Rollout
+metadata:
+  name: caller
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: caller
+  template:
+    metadata:
+      labels:
+        app: caller
+        version: v2
+    spec:
+      containers:
+      - name: caller
+        image: allansli/caller:v2
+        imagePullPolicy: Always
+        env:
+        - name: RECEIVER_ADDR
+          value: "receiver:50051"
+        - name: VERSION
+          value: "v2"
+        ports:
+        - containerPort: 3000
+        resources:
+          requests:
+            cpu: "100m"
+            memory: "64Mi"
+          limits:
+            cpu: "100m"
+            memory: "64Mi"
+  strategy:
+    canary:
+      steps:
+        - setWeight: 33
+        - pause: {duration: 5m}
+        - setWeight: 100
+        - pause: {duration: 5m}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: caller
+spec:
+  selector:
+    app: caller
+  ports:
+  - protocol: TCP
+    port: 3000
+    targetPort: 3000
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: caller-canary
+spec:
+  selector:
+    app: caller
+    version: v2
+  ports:
+  - protocol: TCP
+    port: 3000
+    targetPort: 3000

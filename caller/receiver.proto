@@ -1,0 +1,15 @@
+syntax = "proto3";
+package receiver;
+
+service Receiver {
+  rpc call (ReceiverRequest) returns (ReceiverReply) {}
+}
+
+message ReceiverRequest {
+  string data = 1;
+  string extra = 2;
+}
+
+message ReceiverReply {
+  string message = 1;
+}

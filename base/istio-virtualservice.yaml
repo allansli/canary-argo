@@ -1,0 +1,40 @@
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: receiver
+  annotations:
+    argoproj.io/managed-by-rollouts: receiver
+spec:
+  hosts:
+    - receiver
+  http:
+    # Strict version coupling: caller:v2 → receiver:v2 (header-based, or use subset if you control headers)
+    - match:
+        - headers:
+            x-version:
+              exact: v2
+      route:
+        - destination:
+            host: receiver
+            subset: v2
+          weight: 100
+    # All other traffic: default to stable
+    - route:
+        - destination:
+            host: receiver
+            subset: v1
+          weight: 100
+---
+apiVersion: networking.istio.io/v1beta1
+kind: DestinationRule
+metadata:
+  name: receiver
+spec:
+  host: receiver
+  subsets:
+    - name: v1
+      labels:
+        version: v1
+    - name: v2
+      labels:
+        version: v2
