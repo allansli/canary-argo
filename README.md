@@ -123,6 +123,116 @@ rollback-and-upgrade.bat upgrade
 ### Istio Connectivity Issues
 - Ensure proper mTLS configuration
 
+## Guide for Future Version Upgrades (v2 → v3 → v4, etc.)
+
+This section provides a template for upgrading to new versions beyond the initial v1 → v2 canary deployment.
+
+### 1. Prepare New Version Container Images
+
+```sh
+# Build and push new version images (example for v3)
+cd caller/
+docker build -t allansli/caller:v3 .
+docker push allansli/caller:v3
+
+cd ../receiver/
+docker build -t allansli/receiver:v3 .
+docker push allansli/receiver:v3
+```
+
+### 2. Create Upgrade Rollout Files
+
+Create a new scenario directory for your upgrade:
+
+```sh
+mkdir -p scenario-c-v3upgrade
+```
+
+Copy and modify the rollout templates from the previous version:
+
+```sh
+cp scenario-b-upgrade/caller-rollout.yaml scenario-c-v3upgrade/
+cp scenario-b-upgrade/receiver-rollout.yaml scenario-c-v3upgrade/
+```
+
+### 3. Update the YAML Files
+
+Edit the rollout files for the new version:
+
+```yaml
+# In scenario-c-v3upgrade/caller-rollout.yaml
+spec:
+  template:
+    metadata:
+      labels:
+        app: caller
+        version: v3  # Update version label
+    spec:
+      containers:
+      - name: caller
+        image: allansli/caller:v3  # Update image tag
+        env:
+        - name: VERSION
+          value: "v3"  # Update VERSION env var
+```
+
+```yaml
+# Update service selectors at the bottom of the file
+spec:
+  selector:
+    app: caller
+    version: v3
+```
+
+Repeat the same pattern for the receiver rollout file.
+
+### 4. Apply the Upgrade
+
+Ensure the current version is stable before upgrading:
+
+```sh
+kubectl argo rollouts get rollout caller
+kubectl argo rollouts get rollout receiver
+```
+
+Apply the new version rollouts:
+
+```sh
+kubectl apply -f scenario-c-v3upgrade/caller-rollout.yaml
+kubectl apply -f scenario-c-v3upgrade/receiver-rollout.yaml
+```
+
+### 5. Monitor the Canary Progress
+
+```sh
+kubectl argo rollouts get rollout caller
+kubectl argo rollouts get rollout receiver
+```
+
+### 6. Create a New Rollback Script (Optional)
+
+For each major version, you may want to create a specific rollback script:
+
+```bash
+# rollback-to-v2.bat example
+@echo off
+echo ===== ROLLBACK TO V2 =====
+
+echo Deleting current rollouts and services...
+kubectl delete rollout caller receiver || true
+kubectl delete service caller caller-canary receiver receiver-canary receiver-stable || true
+
+echo Applying V2 Deployment...
+kubectl apply -f scenario-b-upgrade/caller-rollout.yaml
+kubectl apply -f scenario-b-upgrade/receiver-rollout.yaml
+
+echo Checking status...
+kubectl argo rollouts get rollout caller
+kubectl argo rollouts get rollout receiver
+```
+
+This upgrade pattern can be repeated for any number of sequential versions (v3 → v4, v4 → v5, etc.) by following the same steps and incrementing the version numbers.
+
 ## License
 
 MIT
