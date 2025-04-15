@@ -1,14 +1,12 @@
 # AKS Canary Deployments with Argo Rollouts and Istio
 
-This project demonstrates canary deployment patterns on AKS using Argo Rollouts and Istio, featuring three Node.js microservices:
+This project demonstrates canary deployment patterns on AKS using Argo Rollouts and Istio, featuring two Node.js microservices:
 
-- **Capturer**: External-facing service that forwards requests
-- **Caller**: Intermediate service that calls the receiver
+- **Caller**: Service that calls the receiver using gRPC
 - **Receiver**: Backend gRPC service with versioned responses
 
 ## Project Structure
 
-- `capturer/`: Node.js HTTP service, forwards to caller (HTTPS with cert validation bypass)
 - `caller/`: Node.js service that calls `receiver` via gRPC, injects version headers
 - `receiver/`: Node.js gRPC server with version-aware routing logic
 - `scenario-a-initial/`: Initial deployment YAML files (v1) for both services
@@ -24,10 +22,6 @@ This project demonstrates canary deployment patterns on AKS using Argo Rollouts 
 
 ## Service Configuration
 
-### Capturer Service
-- Exposed as LoadBalancer for external access
-- Bypasses HTTPS certificate validation when calling caller
-
 ### Caller and Receiver Services
 - Resource limits: 100m CPU, 64Mi memory
 - Container images tagged with version (v1/v2)
@@ -38,10 +32,6 @@ This project demonstrates canary deployment patterns on AKS using Argo Rollouts 
 ### Building and Pushing Images
 
 ```sh
-# In capturer/
-docker build -t allansli/capturer:latest .
-docker push allansli/capturer:latest
-
 # In caller/
 docker build -t allansli/caller:v1 .
 docker push allansli/caller:v1
@@ -132,7 +122,6 @@ rollback-and-upgrade.bat upgrade
 
 ### Istio Connectivity Issues
 - Ensure proper mTLS configuration
-- Check that the capturer service correctly bypasses certificate validation
 
 ## License
 
